@@ -1,0 +1,7 @@
+{
+  "mode": "read_only",
+  "allowlist_only": true,
+  "no_ingest": true,
+  "no_delete": true,
+  "citations_required": true
+}

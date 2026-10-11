@@ -1,0 +1,8 @@
+{
+  "name": "deep-tutor-knowledge",
+  "version": "0.1.0",
+  "description": "Read-only allowlisted knowledge tools for Deep Tutor (list/search/get).",
+  "author": { "name": "niangxin17" },
+  "keywords": ["deep-tutor", "knowledge", "mcp", "read-only"],
+  "skills": "./skills/"
+}

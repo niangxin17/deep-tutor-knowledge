@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "deep-tutor-knowledge tools",
+  "description": "Frozen field names for Deep Tutor read-only knowledge MCP port.",
+  "tools": [
+    {
+      "name": "knowledge_list_sources",
+      "description": "List allowlisted knowledge sources. Optional learner_id is accepted but ignored in mock.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "learner_id": { "type": "string", "description": "Optional learner id (ignored in mock)." }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["sources"],
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "title", "kind", "uri", "tags"],
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "kind": { "type": "string", "enum": ["file", "note", "url"] },
+                "uri": { "type": "string" },
+                "tags": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "knowledge_search",
+      "description": "Search allowlisted chunks by substring over title+content. Returns hits with citations.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string", "description": "Search query (min trim length 2)." },
+          "source_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional filter to these source ids."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 5,
+            "description": "Max hits (default 5, max 20)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["hits"],
+        "properties": {
+          "hits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["chunk_id", "source_id", "title", "snippet", "score", "citation"],
+              "properties": {
+                "chunk_id": { "type": "string" },
+                "source_id": { "type": "string" },
+                "title": { "type": "string" },
+                "snippet": { "type": "string" },
+                "score": { "type": "number" },
+                "citation": {
+                  "type": "object",
+                  "required": ["source_id", "title", "locator"],
+                  "properties": {
+                    "source_id": { "type": "string" },
+                    "title": { "type": "string" },
+                    "locator": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "knowledge_get",
+      "description": "Get a chunk by chunk_id, or first/full chunk for a source_id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "chunk_id": { "type": "string" },
+          "source_id": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["chunk_id", "source_id", "title", "content", "citation"],
+        "properties": {
+          "chunk_id": { "type": "string" },
+          "source_id": { "type": "string" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "citation": {
+            "type": "object",
+            "required": ["source_id", "title", "locator"],
+            "properties": {
+              "source_id": { "type": "string" },
+              "title": { "type": "string" },
+              "locator": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "errors": [
+    "NOT_IN_ALLOWLIST",
+    "NOT_FOUND",
+    "QUERY_TOO_SHORT",
+    "FORBIDDEN_WRITE",
+    "INVALID_ARGS"
+  ]
+}
