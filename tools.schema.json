@@ -1,15 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "deep-tutor-knowledge tools",
-  "description": "Frozen field names for Deep Tutor read-only knowledge MCP port.",
+  "description": "Frozen field names for Deep Tutor read-only knowledge MCP port (local whitelist files).",
   "tools": [
     {
       "name": "knowledge_list_sources",
-      "description": "List allowlisted knowledge sources. Optional learner_id is accepted but ignored in mock.",
+      "description": "List allowlisted knowledge files under whitelist roots. Optional learner_id is accepted but ignored.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "learner_id": { "type": "string", "description": "Optional learner id (ignored in mock)." }
+          "learner_id": { "type": "string", "description": "Optional learner id (ignored)." }
         },
         "additionalProperties": false
       },
@@ -23,10 +23,10 @@
               "type": "object",
               "required": ["id", "title", "kind", "uri", "tags"],
               "properties": {
-                "id": { "type": "string" },
+                "id": { "type": "string", "description": "e.g. methods/foo.md" },
                 "title": { "type": "string" },
                 "kind": { "type": "string", "enum": ["file", "note", "url"] },
-                "uri": { "type": "string" },
+                "uri": { "type": "string", "description": "file:// URI of the allowlisted file" },
                 "tags": { "type": "array", "items": { "type": "string" } }
               }
             }
@@ -36,7 +36,7 @@
     },
     {
       "name": "knowledge_search",
-      "description": "Search allowlisted chunks by substring over title+content. Returns hits with citations.",
+      "description": "Search allowlisted file contents by substring over title+content. Returns hits with citations.",
       "inputSchema": {
         "type": "object",
         "required": ["query"],
@@ -89,7 +89,7 @@
     },
     {
       "name": "knowledge_get",
-      "description": "Get a chunk by chunk_id, or first/full chunk for a source_id.",
+      "description": "Get file content by chunk_id (source_id#full) or source_id.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -113,6 +113,45 @@
               "source_id": { "type": "string" },
               "title": { "type": "string" },
               "locator": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "knowledge_domain_counts",
+      "description": "Count allowlisted files per domain root for /studio cards. methods.extra.wikilinks counts [[wikilinks]]; concepts.extra.mentions counts concept-title occurrences across files.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "domains": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Optional domain ids (default: all whitelist roots)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["counts"],
+        "properties": {
+          "counts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["domain", "items", "extra"],
+              "properties": {
+                "domain": { "type": "string" },
+                "items": { "type": "integer" },
+                "extra": {
+                  "type": "object",
+                  "properties": {
+                    "wikilinks": { "type": "integer" },
+                    "mentions": { "type": "integer" }
+                  }
+                }
+              }
             }
           }
         }

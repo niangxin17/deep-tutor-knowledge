@@ -1,0 +1,8 @@
+{
+  "roots": [
+    { "id": "methods", "title": "方法库", "kind": "file", "path": "./data/methods", "tags": ["methods"] },
+    { "id": "concepts", "title": "概念网络", "kind": "file", "path": "./data/concepts", "tags": ["concepts"] }
+  ],
+  "extensions": [".md", ".txt", ".yaml", ".yml", ".json"],
+  "max_file_bytes": 200000
+}

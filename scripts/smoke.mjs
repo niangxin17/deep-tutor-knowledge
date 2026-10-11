@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smoke: spawn MCP server, initialize, listTools, call all 3 tools + error cases.
+ * Smoke: spawn MCP server, initialize, listTools, call tools + error cases.
  * Exit 0 on PASS, 1 on FAIL. Prints one-line summary.
  */
 import { spawn } from "node:child_process";
@@ -101,7 +101,6 @@ async function main() {
   };
 
   try {
-    // 1) initialize
     send(child, {
       jsonrpc: "2.0",
       id: 1,
@@ -109,7 +108,7 @@ async function main() {
       params: {
         protocolVersion: "2024-11-05",
         capabilities: {},
-        clientInfo: { name: "smoke", version: "0.1.0" },
+        clientInfo: { name: "smoke", version: "0.2.0" },
       },
     });
     const [initRes] = await readMessages(child, 1);
@@ -117,17 +116,16 @@ async function main() {
       fail(`initialize missing serverInfo: ${JSON.stringify(initRes)}`);
     }
 
-    // notifications/initialized (no response expected)
     send(child, {
       jsonrpc: "2.0",
       method: "notifications/initialized",
     });
 
-    // 2) tools/list
     send(child, { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
     const [listRes] = await readMessages(child, 1);
     const names = (listRes.result?.tools || []).map((t) => t.name).sort();
     const expected = [
+      "knowledge_domain_counts",
       "knowledge_get",
       "knowledge_list_sources",
       "knowledge_search",
@@ -136,12 +134,11 @@ async function main() {
       fail(`tools/list expected ${expected.join(",")} got ${names.join(",")}`);
     }
 
-    // 3) knowledge_list_sources
     send(child, {
       jsonrpc: "2.0",
       id: 3,
       method: "tools/call",
-      params: { name: "knowledge_list_sources", arguments: { learner_id: "mock" } },
+      params: { name: "knowledge_list_sources", arguments: { learner_id: "smoke" } },
     });
     const [listSrcRes] = await readMessages(child, 1);
     const listPayload = parseToolPayload(listSrcRes.result);
@@ -149,7 +146,6 @@ async function main() {
       fail(`knowledge_list_sources expected ≥1 source: ${JSON.stringify(listPayload)}`);
     }
 
-    // 4) knowledge_search known keyword
     send(child, {
       jsonrpc: "2.0",
       id: 4,
@@ -167,7 +163,6 @@ async function main() {
     }
     const chunkId = hit.chunk_id;
 
-    // 5) knowledge_get by chunk_id
     send(child, {
       jsonrpc: "2.0",
       id: 5,
@@ -180,26 +175,45 @@ async function main() {
       fail(`knowledge_get expected non-empty content: ${JSON.stringify(getPayload)}`);
     }
 
-    // 6) QUERY_TOO_SHORT
     send(child, {
       jsonrpc: "2.0",
       id: 6,
+      method: "tools/call",
+      params: {
+        name: "knowledge_domain_counts",
+        arguments: { domains: ["methods", "concepts"] },
+      },
+    });
+    const [countsRes] = await readMessages(child, 1);
+    const countsPayload = parseToolPayload(countsRes.result);
+    if (!Array.isArray(countsPayload.counts) || countsPayload.counts.length < 2) {
+      fail(`domain_counts expected methods+concepts: ${JSON.stringify(countsPayload)}`);
+    }
+    const byDomain = Object.fromEntries(
+      countsPayload.counts.map((c) => [c.domain, c])
+    );
+    if (!byDomain.methods || byDomain.methods.items < 1) {
+      fail(`methods items≥1: ${JSON.stringify(countsPayload)}`);
+    }
+    if (!byDomain.concepts || byDomain.concepts.items < 1) {
+      fail(`concepts items≥1: ${JSON.stringify(countsPayload)}`);
+    }
+
+    send(child, {
+      jsonrpc: "2.0",
+      id: 7,
       method: "tools/call",
       params: { name: "knowledge_search", arguments: { query: "x" } },
     });
     const [shortRes] = await readMessages(child, 1);
     const shortPayload = parseToolPayload(shortRes.result);
-    if (shortPayload.code !== "QUERY_TOO_SHORT" && !shortRes.result?.isError) {
-      fail(`expected QUERY_TOO_SHORT: ${JSON.stringify(shortPayload)}`);
-    }
     if (shortPayload.code !== "QUERY_TOO_SHORT") {
-      fail(`expected code QUERY_TOO_SHORT got ${shortPayload.code}`);
+      fail(`expected QUERY_TOO_SHORT got ${shortPayload.code}`);
     }
 
-    // 7) NOT_FOUND
     send(child, {
       jsonrpc: "2.0",
-      id: 7,
+      id: 8,
       method: "tools/call",
       params: {
         name: "knowledge_get",
@@ -212,12 +226,47 @@ async function main() {
       fail(`expected NOT_FOUND: ${JSON.stringify(nfPayload)}`);
     }
 
+    // Path outside whitelist → NOT_IN_ALLOWLIST
+    send(child, {
+      jsonrpc: "2.0",
+      id: 9,
+      method: "tools/call",
+      params: {
+        name: "knowledge_get",
+        arguments: { source_id: "methods/../../etc/passwd" },
+      },
+    });
+    const [travRes] = await readMessages(child, 1);
+    const travPayload = parseToolPayload(travRes.result);
+    if (travPayload.code !== "NOT_IN_ALLOWLIST") {
+      fail(`expected NOT_IN_ALLOWLIST for traversal: ${JSON.stringify(travPayload)}`);
+    }
+
+    send(child, {
+      jsonrpc: "2.0",
+      id: 10,
+      method: "tools/call",
+      params: {
+        name: "knowledge_search",
+        arguments: { query: "惯性", path: "/etc/passwd" },
+      },
+    });
+    const [pathRes] = await readMessages(child, 1);
+    const pathPayload = parseToolPayload(pathRes.result);
+    if (pathPayload.code !== "NOT_IN_ALLOWLIST") {
+      fail(`expected NOT_IN_ALLOWLIST for path: ${JSON.stringify(pathPayload)}`);
+    }
+
     kill();
     console.log(
-      "PASS: initialize + 3 tools + QUERY_TOO_SHORT + NOT_FOUND (sources=" +
+      "PASS: initialize + 4 tools + domain_counts + QUERY_TOO_SHORT + NOT_FOUND + NOT_IN_ALLOWLIST (sources=" +
         listPayload.sources.length +
         ", hits=" +
         searchPayload.hits.length +
+        ", methods=" +
+        byDomain.methods.items +
+        ", concepts=" +
+        byDomain.concepts.items +
         ")"
     );
     process.exit(0);

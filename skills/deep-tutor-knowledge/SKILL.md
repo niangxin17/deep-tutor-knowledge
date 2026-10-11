@@ -1,15 +1,16 @@
 ---
 name: deep-tutor-knowledge
-description: Read-only allowlisted knowledge for Deep Tutor. Use list/search/get; never invent citations.
+description: Read-only local-whitelist knowledge for Deep Tutor. Use list/search/get/domain_counts; never invent citations.
 ---
 
 # Deep Tutor Knowledge
 
 ## When to use which tool
 
-1. **`knowledge_list_sources`** — Discover what the learner may read. Call first when you need source ids/titles/tags. Optional `learner_id` is accepted but ignored in the mock.
-2. **`knowledge_search`** — Find relevant chunks by keyword. Always pass a query of length ≥ 2 after trim. Prefer filtering with `source_ids` when the learner is scoped to a unit. Default `limit` is 5 (max 20).
-3. **`knowledge_get`** — Fetch full text. Prefer `chunk_id` from a search hit. If only `source_id` is known, the server returns the first chunk for that source.
+1. **`knowledge_list_sources`** — Discover allowlisted files under whitelist roots (`methods/…`, `concepts/…`). Optional `learner_id` is accepted but ignored.
+2. **`knowledge_search`** — Find relevant file chunks by keyword. Query trim length ≥ 2. Prefer `source_ids` when scoped. Default `limit` 5 (max 20).
+3. **`knowledge_get`** — Fetch full file text. Prefer `chunk_id` from a search hit (`source_id#full`). Or pass `source_id` like `methods/费曼一轮.md`.
+4. **`knowledge_domain_counts`** — `/studio` card counts. Optional `domains` (default all roots). `items` = file count; `extra.wikilinks` = `[[…]]` count in methods files; `extra.mentions` = concept-title occurrences across all allowlisted files.
 
 ## Citations (required)
 
@@ -20,7 +21,7 @@ description: Read-only allowlisted knowledge for Deep Tutor. Use list/search/get
 ## Policy reminders
 
 - Read-only: no ingest, no delete, no writes.
-- Allowlist-only: paths/uris outside allowlisted sources are rejected.
+- Whitelist-only: paths/uris outside configured roots are rejected (`NOT_IN_ALLOWLIST`). Path traversal is rejected the same way.
 - Soft errors appear as structured JSON in the tool result text (`code` field).
 
 ## Typical flow
@@ -29,4 +30,7 @@ description: Read-only allowlisted knowledge for Deep Tutor. Use list/search/get
 knowledge_list_sources → pick source_ids
 knowledge_search({ query, source_ids?, limit? }) → pick chunk_id
 knowledge_get({ chunk_id }) → use content + citation
+
+# /studio cards
+knowledge_domain_counts({ domains?: ["methods","concepts"] })
 ```

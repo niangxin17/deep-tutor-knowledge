@@ -1,6 +1,6 @@
 # deep-tutor-knowledge
 
-Read-only allowlisted knowledge MCP tools for **Deep Tutor** (`list` / `search` / `get`).
+Read-only **local whitelist** knowledge MCP tools for **Deep Tutor** (`list` / `search` / `get` / `domain_counts`).
 
 **Status:** local scaffold only — **not published** to the Cursor marketplace.
 
@@ -20,44 +20,69 @@ Soft errors (JSON in tool result text, often with `isError: true`):
 
 `NOT_IN_ALLOWLIST` | `NOT_FOUND` | `QUERY_TOO_SHORT` | `FORBIDDEN_WRITE` | `INVALID_ARGS`
 
+Path traversal and any path outside configured roots → `NOT_IN_ALLOWLIST`.
+
+## Whitelist (v0.2)
+
+Config: [`server/whitelist.json`](./server/whitelist.json) (or env `KNOWLEDGE_WHITELIST` = absolute path to a whitelist JSON).
+
+```json
+{
+  "roots": [
+    { "id": "methods", "title": "方法库", "kind": "file", "path": "./data/methods", "tags": ["methods"] },
+    { "id": "concepts", "title": "概念网络", "kind": "file", "path": "./data/concepts", "tags": ["concepts"] }
+  ],
+  "extensions": [".md", ".txt", ".yaml", ".yml", ".json"],
+  "max_file_bytes": 200000
+}
+```
+
+Sample Chinese markdown ships under `server/data/methods/` and `server/data/concepts/` so smoke works out of the box.
+
+### Pointing roots at Windows folders later
+
+1. Copy `server/whitelist.json` somewhere writable, or set:
+   ```bat
+   set KNOWLEDGE_WHITELIST=D:\Gork bot\knowledge-whitelist.json
+   ```
+2. In that JSON, set root `path` values to absolute folders, e.g.:
+   ```json
+   { "id": "methods", "title": "方法库", "kind": "file", "path": "D:\\Gork bot\\methods", "tags": ["methods"] }
+   ```
+   Paths are resolved relative to the whitelist file’s directory when relative; absolute paths are used as-is. Only files under those roots with allowed extensions are readable.
+
 ## Domain model
 
-- **sources** — allowlisted documents (`id`, `title`, `kind`, `uri`, `tags`)
-- **chunks** — text units under a source (`chunk_id`, `source_id`, `title`, `content`, `locator`)
-- **citations** — always returned on search hits and get (`source_id`, `title`, `locator`)
-
-Mock data lives in [`server/allowlist.json`](./server/allowlist.json) (中学理科 / 费曼学习法).
+- **sources** — one per allowlisted file (`id` like `methods/费曼一轮.md`, `kind: file`, `uri: file://…`, `tags` from root)
+- **chunks** — whole-file units (`chunk_id` = `source_id#full`)
+- **citations** — always on search hits and get (`source_id`, `title`, `locator`)
 
 ## Layout
 
 ```
-plugin.json                 # Agent Plugin root manifest
-mcp.json                    # stdio server (${CURSOR_PLUGIN_ROOT})
+plugin.json
+mcp.json
 policy.json
-tools.schema.json           # frozen tool field names
+tools.schema.json
 skills/deep-tutor-knowledge/SKILL.md
-server/index.mjs            # zero-dep Node ESM MCP stdio server
-server/allowlist.json
-server/package.json         # {"type":"module"} only — no deps
+server/index.mjs              # thin MCP stdio wrapper
+server/whitelist.json
+server/lib/knowledge.mjs      # listSources / search / get / domainCounts (importable)
+server/lib/counts.mjs         # re-export of domainCounts
+server/data/methods|concepts/ # sample files
+server/package.json           # {"type":"module"} — no deps
 scripts/smoke.mjs
 ```
 
 ## Install locally in Cursor IDE
 
-Agent Plugins can be loaded from a **local plugin directory** (if your Cursor build supports it) or from the marketplace after publish. This package is **not** published.
-
 ### Option A — Cursor Agent Plugin dir
 
-1. Copy or symlink this folder into your Cursor plugins location (product-specific; often under user Cursor config / plugins).
-2. Ensure `mcp.json` uses `${CURSOR_PLUGIN_ROOT}` (already set). Cursor expands `CURSOR_PLUGIN_ROOT`; it does **not** expand `PLUGIN_ROOT`.
-3. Reload MCP / restart Cursor. You should see server `deep-tutor-knowledge` with tools:
-   - `knowledge_list_sources`
-   - `knowledge_search`
-   - `knowledge_get`
+1. Copy or symlink this folder into your Cursor plugins location.
+2. Ensure `mcp.json` uses `${CURSOR_PLUGIN_ROOT}` (already set).
+3. Reload MCP. Tools: `knowledge_list_sources`, `knowledge_search`, `knowledge_get`, `knowledge_domain_counts`.
 
-### Option B — Project `.cursor/mcp.json` (deep-tutor app)
-
-For the Next.js mock app (`niangxin17/deep-tutor`, e.g. `:3001`), wire the same server with an **absolute or relative path** — no `CURSOR_PLUGIN_ROOT` needed:
+### Option B — Project `.cursor/mcp.json`
 
 ```json
 {
@@ -71,31 +96,29 @@ For the Next.js mock app (`niangxin17/deep-tutor`, e.g. `:3001`), wire the same 
 }
 ```
 
-Or with an absolute path:
+### Option C — Next.js without spawning MCP (preferred for `/studio`)
 
-```json
-{
-  "mcpServers": {
-    "deep-tutor-knowledge": {
-      "command": "node",
-      "args": ["/workspace/deep-tutor-knowledge/server/index.mjs"],
-      "cwd": "/workspace/deep-tutor-knowledge"
-    }
-  }
-}
+Import the same helpers the server uses:
+
+```js
+import {
+  loadWhitelist,
+  domainCounts,
+  listSources,
+  search,
+  get,
+} from "../deep-tutor-knowledge/server/lib/knowledge.mjs";
+// or copy server/lib/knowledge.mjs into the app
+
+const wl = loadWhitelist("/absolute/path/to/deep-tutor-knowledge/server");
+const { counts } = domainCounts(wl, { domains: ["methods", "concepts"] });
+// wire methods/concepts card items + extra.wikilinks / extra.mentions
 ```
 
-### Option C — Next.js mock without MCP
+Heuristics (MVP):
 
-Import or `fetch` the same allowlist JSON the server uses:
-
-```ts
-// e.g. app/api/knowledge/route.ts or a mock module
-import allowlist from "../../deep-tutor-knowledge/server/allowlist.json";
-// expose list/search/get over HTTP mirroring tools.schema.json
-```
-
-Point at `server/allowlist.json` so IDE MCP and the web mock stay in sync.
+- **wikilinks** — count of `[[…]]` tokens inside methods-domain files
+- **mentions** — sum of case-sensitive occurrences of each concepts-file title across all allowlisted file bodies
 
 ## Smoke test
 
@@ -108,15 +131,16 @@ Expects exit `0` and a one-line `PASS: ...` summary. No `npm install` required.
 
 ## Tools (frozen names)
 
-1. `knowledge_list_sources` — optional `{ learner_id }` (ignored in mock)
-2. `knowledge_search` — `{ query, source_ids?, limit? }` (default limit 5, max 20)
+1. `knowledge_list_sources` — optional `{ learner_id }`
+2. `knowledge_search` — `{ query, source_ids?, limit? }`
 3. `knowledge_get` — `{ chunk_id }` **or** `{ source_id }`
+4. `knowledge_domain_counts` — `{ domains? }` → `{ counts: [{ domain, items, extra }] }`
 
-Full schemas: [`tools.schema.json`](./tools.schema.json). Skill guidance: [`skills/deep-tutor-knowledge/SKILL.md`](./skills/deep-tutor-knowledge/SKILL.md).
+Full schemas: [`tools.schema.json`](./tools.schema.json).
 
 ## Notes for engineers
 
-- **Grok Bot / cloud agents** cannot load local Cursor plugins. Use Cursor IDE with a local plugin dir or project MCP config.
-- Do not publish this to the marketplace unless PM asks.
-- Zero-dep by design (Poteto Mode laziness): no `@modelcontextprotocol/sdk` until an SDK earns it.
-- Sibling app `niangxin17/deep-tutor` is built separately; do not touch `ai-studio` or `dream-icebreaker`.
+- **Grok Bot / cloud agents** cannot load local Cursor plugins. Use Cursor IDE or import `server/lib/knowledge.mjs`.
+- Do not publish to the marketplace unless PM asks.
+- Zero-dep by design. Do not touch `ai-studio` or `dream-icebreaker` main paths.
+- Sibling app `niangxin17/deep-tutor` `/studio` currently mocks five-card counts; wire `methods` / `concepts` from `knowledge_domain_counts` or `domainCounts()`.
