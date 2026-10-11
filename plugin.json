@@ -1,8 +1,16 @@
 {
   "name": "deep-tutor-knowledge",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Read-only local-whitelist knowledge tools for Deep Tutor (list/search/get/domain_counts).",
-  "author": { "name": "niangxin17" },
-  "keywords": ["deep-tutor", "knowledge", "mcp", "read-only", "whitelist"],
+  "author": {
+    "name": "niangxin17"
+  },
+  "keywords": [
+    "deep-tutor",
+    "knowledge",
+    "mcp",
+    "read-only",
+    "whitelist"
+  ],
   "skills": "./skills/"
 }

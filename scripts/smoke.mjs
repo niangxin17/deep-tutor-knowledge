@@ -145,6 +145,9 @@ async function main() {
     if (!Array.isArray(listPayload.sources) || listPayload.sources.length < 1) {
       fail(`knowledge_list_sources expected ≥1 source: ${JSON.stringify(listPayload)}`);
     }
+    if (typeof listPayload.sources[0].path !== "string" || !listPayload.sources[0].path) {
+      fail(`source.path missing: ${JSON.stringify(listPayload.sources[0])}`);
+    }
 
     send(child, {
       jsonrpc: "2.0",
@@ -158,8 +161,11 @@ async function main() {
       fail(`knowledge_search expected ≥1 hit: ${JSON.stringify(searchPayload)}`);
     }
     const hit = searchPayload.hits[0];
-    if (!hit.citation || !hit.citation.source_id || !hit.citation.locator) {
-      fail(`knowledge_search hit missing citation: ${JSON.stringify(hit)}`);
+    if (!hit.citation || !hit.citation.source_id || !hit.citation.locator || !hit.citation.path) {
+      fail(`knowledge_search hit missing citation.path: ${JSON.stringify(hit)}`);
+    }
+    if (typeof hit.path !== "string" || !hit.path) {
+      fail(`hit.path missing: ${JSON.stringify(hit)}`);
     }
     const chunkId = hit.chunk_id;
 

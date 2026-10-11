@@ -34,3 +34,5 @@ knowledge_get({ chunk_id }) → use content + citation
 # /studio cards
 knowledge_domain_counts({ domains?: ["methods","concepts"] })
 ```
+
+Always surface `citation.path` (whitelist-relative) on UI citation bars; never invent paths.

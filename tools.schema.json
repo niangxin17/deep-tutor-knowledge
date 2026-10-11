@@ -9,25 +9,61 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "learner_id": { "type": "string", "description": "Optional learner id (ignored)." }
+          "learner_id": {
+            "type": "string",
+            "description": "Optional learner id (ignored)."
+          }
         },
         "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
-        "required": ["sources"],
+        "required": [
+          "sources"
+        ],
         "properties": {
           "sources": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["id", "title", "kind", "uri", "tags"],
+              "required": [
+                "id",
+                "title",
+                "kind",
+                "uri",
+                "tags",
+                "path"
+              ],
               "properties": {
-                "id": { "type": "string", "description": "e.g. methods/foo.md" },
-                "title": { "type": "string" },
-                "kind": { "type": "string", "enum": ["file", "note", "url"] },
-                "uri": { "type": "string", "description": "file:// URI of the allowlisted file" },
-                "tags": { "type": "array", "items": { "type": "string" } }
+                "id": {
+                  "type": "string",
+                  "description": "e.g. methods/foo.md"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "file",
+                    "note",
+                    "url"
+                  ]
+                },
+                "uri": {
+                  "type": "string",
+                  "description": "file:// URI of the allowlisted file"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Whitelist-relative path (same as id)."
+                }
               }
             }
           }
@@ -39,12 +75,19 @@
       "description": "Search allowlisted file contents by substring over title+content. Returns hits with citations.",
       "inputSchema": {
         "type": "object",
-        "required": ["query"],
+        "required": [
+          "query"
+        ],
         "properties": {
-          "query": { "type": "string", "description": "Search query (min trim length 2)." },
+          "query": {
+            "type": "string",
+            "description": "Search query (min trim length 2)."
+          },
           "source_ids": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Optional filter to these source ids."
           },
           "limit": {
@@ -59,27 +102,65 @@
       },
       "outputSchema": {
         "type": "object",
-        "required": ["hits"],
+        "required": [
+          "hits"
+        ],
         "properties": {
           "hits": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["chunk_id", "source_id", "title", "snippet", "score", "citation"],
+              "required": [
+                "chunk_id",
+                "source_id",
+                "title",
+                "snippet",
+                "score",
+                "citation",
+                "path"
+              ],
               "properties": {
-                "chunk_id": { "type": "string" },
-                "source_id": { "type": "string" },
-                "title": { "type": "string" },
-                "snippet": { "type": "string" },
-                "score": { "type": "number" },
+                "chunk_id": {
+                  "type": "string"
+                },
+                "source_id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number"
+                },
                 "citation": {
                   "type": "object",
-                  "required": ["source_id", "title", "locator"],
+                  "required": [
+                    "source_id",
+                    "title",
+                    "locator",
+                    "path"
+                  ],
                   "properties": {
-                    "source_id": { "type": "string" },
-                    "title": { "type": "string" },
-                    "locator": { "type": "string" }
+                    "source_id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "locator": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Whitelist-relative path for citation bar."
+                    }
                   }
+                },
+                "path": {
+                  "type": "string"
                 }
               }
             }
@@ -93,27 +174,64 @@
       "inputSchema": {
         "type": "object",
         "properties": {
-          "chunk_id": { "type": "string" },
-          "source_id": { "type": "string" }
+          "chunk_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       },
       "outputSchema": {
         "type": "object",
-        "required": ["chunk_id", "source_id", "title", "content", "citation"],
+        "required": [
+          "chunk_id",
+          "source_id",
+          "title",
+          "content",
+          "citation",
+          "path"
+        ],
         "properties": {
-          "chunk_id": { "type": "string" },
-          "source_id": { "type": "string" },
-          "title": { "type": "string" },
-          "content": { "type": "string" },
+          "chunk_id": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
           "citation": {
             "type": "object",
-            "required": ["source_id", "title", "locator"],
+            "required": [
+              "source_id",
+              "title",
+              "locator",
+              "path"
+            ],
             "properties": {
-              "source_id": { "type": "string" },
-              "title": { "type": "string" },
-              "locator": { "type": "string" }
+              "source_id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "locator": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string",
+                "description": "Whitelist-relative path for citation bar."
+              }
             }
+          },
+          "path": {
+            "type": "string"
           }
         }
       }
@@ -126,7 +244,9 @@
         "properties": {
           "domains": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Optional domain ids (default: all whitelist roots)."
           }
         },
@@ -134,21 +254,35 @@
       },
       "outputSchema": {
         "type": "object",
-        "required": ["counts"],
+        "required": [
+          "counts"
+        ],
         "properties": {
           "counts": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["domain", "items", "extra"],
+              "required": [
+                "domain",
+                "items",
+                "extra"
+              ],
               "properties": {
-                "domain": { "type": "string" },
-                "items": { "type": "integer" },
+                "domain": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "integer"
+                },
                 "extra": {
                   "type": "object",
                   "properties": {
-                    "wikilinks": { "type": "integer" },
-                    "mentions": { "type": "integer" }
+                    "wikilinks": {
+                      "type": "integer"
+                    },
+                    "mentions": {
+                      "type": "integer"
+                    }
                   }
                 }
               }

@@ -215,6 +215,7 @@ function makeCitation(source, locator = "full") {
     source_id: source.source_id,
     title: source.title,
     locator,
+    path: source.source_id,
   };
 }
 
@@ -276,6 +277,7 @@ export function listSources(wl, args = {}) {
       kind: s.kind,
       uri: s.uri,
       tags: s.tags,
+      path: s.source_id,
     })),
   };
 }
@@ -352,6 +354,7 @@ export function search(wl, args = {}) {
       title: source.title,
       snippet,
       score: Math.round(score * 1000) / 1000,
+      path: source.source_id,
       citation: makeCitation(source, "full"),
     });
   }
@@ -416,6 +419,7 @@ export function get(wl, args = {}) {
     source_id: source.source_id,
     title: source.title,
     content,
+    path: source.source_id,
     citation: makeCitation(source, "full"),
   };
 }

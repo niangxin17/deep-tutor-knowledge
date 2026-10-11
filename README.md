@@ -144,3 +144,11 @@ Full schemas: [`tools.schema.json`](./tools.schema.json).
 - Do not publish to the marketplace unless PM asks.
 - Zero-dep by design. Do not touch `ai-studio` or `dream-icebreaker` main paths.
 - Sibling app `niangxin17/deep-tutor` `/studio` currently mocks five-card counts; wire `methods` / `concepts` from `knowledge_domain_counts` or `domainCounts()`.
+
+## Citation path (v0.2.1)
+
+Studio list pages must show the whitelist-relative path from search/get:
+
+- `hit.path` or `hit.citation.path` (e.g. `concepts/费曼复述.md`)
+- Never invent a path; empty hits → empty list, no textbook filler.
+
