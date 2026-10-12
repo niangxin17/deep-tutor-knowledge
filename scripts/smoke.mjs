@@ -108,7 +108,7 @@ async function main() {
       params: {
         protocolVersion: "2024-11-05",
         capabilities: {},
-        clientInfo: { name: "smoke", version: "0.2.0" },
+        clientInfo: { name: "smoke", version: "0.3.0" },
       },
     });
     const [initRes] = await readMessages(child, 1);
@@ -127,6 +127,8 @@ async function main() {
     const expected = [
       "knowledge_domain_counts",
       "knowledge_get",
+      "knowledge_graph_neighbors",
+      "knowledge_graph_snapshot",
       "knowledge_list_sources",
       "knowledge_search",
     ];
@@ -263,9 +265,119 @@ async function main() {
       fail(`expected NOT_IN_ALLOWLIST for path: ${JSON.stringify(pathPayload)}`);
     }
 
+    send(child, {
+      jsonrpc: "2.0",
+      id: 11,
+      method: "tools/call",
+      params: {
+        name: "knowledge_graph_snapshot",
+        arguments: { mode: "all", top_n: 8, limit_nodes: 80 },
+      },
+    });
+    const [graphRes] = await readMessages(child, 1);
+    const graphPayload = parseToolPayload(graphRes.result);
+    if (!Array.isArray(graphPayload.nodes) || !Array.isArray(graphPayload.edges)) {
+      fail(`graph_snapshot missing nodes/edges: ${JSON.stringify(graphPayload)}`);
+    }
+    if (!Array.isArray(graphPayload.topConnected) || !Array.isArray(graphPayload.topConcepts)) {
+      fail(`graph_snapshot missing top*: ${JSON.stringify(graphPayload)}`);
+    }
+    for (const n of graphPayload.nodes) {
+      for (const k of ["id", "title", "shelf", "path", "weight"]) {
+        if (n[k] === undefined) fail(`node missing ${k}: ${JSON.stringify(n)}`);
+      }
+    }
+    for (const e of graphPayload.edges) {
+      for (const k of ["from", "to", "kind", "weight"]) {
+        if (e[k] === undefined) fail(`edge missing ${k}: ${JSON.stringify(e)}`);
+      }
+      if (!["link", "mutual", "unresolved"].includes(e.kind)) {
+        fail(`bad edge kind: ${e.kind}`);
+      }
+    }
+    const mutual = graphPayload.edges.filter((e) => e.kind === "mutual");
+    const links = graphPayload.edges.filter((e) => e.kind === "link" || e.kind === "mutual");
+    if (graphPayload.nodes.length < 1) fail("expected ≥1 node");
+    // sample data has real wikilinks — expect at least one resolved edge
+    if (links.length < 1) {
+      fail(`expected ≥1 resolved edge from sample wikilinks: ${JSON.stringify(graphPayload.edges)}`);
+    }
+    if (mutual.length < 1) {
+      fail(`expected ≥1 mutual (费曼复述↔费曼一轮): ${JSON.stringify(graphPayload.edges)}`);
+    }
+    for (const row of graphPayload.topConnected) {
+      for (const k of ["from_title", "to_title", "from_path", "to_path", "kind", "weight"]) {
+        if (row[k] === undefined) fail(`topConnected missing ${k}`);
+      }
+    }
+    for (const row of graphPayload.topConcepts) {
+      for (const k of ["title", "mentions", "path"]) {
+        if (row[k] === undefined) fail(`topConcepts missing ${k}`);
+      }
+    }
+
+    // empty-domain / empty filter honesty: unresolved-only may be empty array (ok)
+    send(child, {
+      jsonrpc: "2.0",
+      id: 12,
+      method: "tools/call",
+      params: {
+        name: "knowledge_graph_snapshot",
+        arguments: { mode: "unresolved", domains: ["concepts"] },
+      },
+    });
+    const [unRes] = await readMessages(child, 1);
+    const unPayload = parseToolPayload(unRes.result);
+    if (!Array.isArray(unPayload.edges) || unPayload.topConnected === undefined) {
+      fail(`unresolved mode shape: ${JSON.stringify(unPayload)}`);
+    }
+    // must not invent: if empty, edges === []
+    if (unPayload.edges.length === 0 && unPayload.topConnected.length !== 0) {
+      fail("empty unresolved must not invent topConnected");
+    }
+
+    send(child, {
+      jsonrpc: "2.0",
+      id: 13,
+      method: "tools/call",
+      params: {
+        name: "knowledge_graph_neighbors",
+        arguments: { node_id: "methods/费曼一轮.md", kind: "all", limit: 12 },
+      },
+    });
+    const [nbRes] = await readMessages(child, 1);
+    const nbPayload = parseToolPayload(nbRes.result);
+    if (!nbPayload.node || !Array.isArray(nbPayload.neighbors)) {
+      fail(`neighbors shape: ${JSON.stringify(nbPayload)}`);
+    }
+    if (nbPayload.neighbors.length < 1) {
+      fail(`费曼一轮 should have neighbors: ${JSON.stringify(nbPayload)}`);
+    }
+
+    send(child, {
+      jsonrpc: "2.0",
+      id: 14,
+      method: "tools/call",
+      params: {
+        name: "knowledge_graph_neighbors",
+        arguments: { node_id: "methods/does-not-exist.md" },
+      },
+    });
+    const [nbNf] = await readMessages(child, 1);
+    const nbNfPayload = parseToolPayload(nbNf.result);
+    if (nbNfPayload.code !== "NOT_FOUND") {
+      fail(`neighbors NOT_FOUND: ${JSON.stringify(nbNfPayload)}`);
+    }
+
     kill();
     console.log(
-      "PASS: initialize + 4 tools + domain_counts + QUERY_TOO_SHORT + NOT_FOUND + NOT_IN_ALLOWLIST (sources=" +
+      "PASS: initialize + 6 tools + graph_snapshot(nodes=" +
+        graphPayload.nodes.length +
+        ",edges=" +
+        graphPayload.edges.length +
+        ",mutual=" +
+        mutual.length +
+        ") + neighbors + soft errors (sources=" +
         listPayload.sources.length +
         ", hits=" +
         searchPayload.hits.length +

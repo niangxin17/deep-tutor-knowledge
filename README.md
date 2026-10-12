@@ -1,6 +1,6 @@
 # deep-tutor-knowledge
 
-Read-only **local whitelist** knowledge MCP tools for **Deep Tutor** (`list` / `search` / `get` / `domain_counts`).
+Read-only **local whitelist** knowledge MCP tools for **Deep Tutor** (`list` / `search` / `get` / `domain_counts` / `graph_snapshot` / `graph_neighbors`).
 
 **Status:** local scaffold only — **not published** to the Cursor marketplace.
 
@@ -156,3 +156,17 @@ Studio list pages must show the whitelist-relative path from search/get:
 ## Links graph sketch (P1)
 
 See [`tools.links.schema.json`](./tools.links.schema.json): `knowledge_graph_snapshot` + optional `knowledge_graph_neighbors`. P0 UI may mock; empty edges must not invent.
+
+## Graph (v0.3)
+
+Tools: `knowledge_graph_snapshot`, `knowledge_graph_neighbors`. Field names frozen in [`tools.links.schema.json`](./tools.links.schema.json).
+
+- Edges from `[[wikilink]]` tokens in allowlisted files only.
+- Kinds: `link` | `mutual` | `unresolved` (unresolved `to` is `unresolved:<token>` + optional `label`).
+- Empty edges → `edges: []` / empty overlay lists — **never invent**.
+- Caps: `limit_nodes` ≤ 80, `limit_edges` ≤ 400, `top_n` ≤ 20.
+
+```bash
+node scripts/smoke.mjs
+```
+

@@ -1,7 +1,7 @@
 {
   "name": "deep-tutor-knowledge",
-  "version": "0.2.1",
-  "description": "Read-only local-whitelist knowledge tools for Deep Tutor (list/search/get/domain_counts).",
+  "version": "0.3.0",
+  "description": "Read-only local-whitelist knowledge tools for Deep Tutor (list/search/get/domain_counts/graph_snapshot/neighbors).",
   "author": {
     "name": "niangxin17"
   },

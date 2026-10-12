@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "deep-tutor-knowledge links (P1 sketch)",
-  "description": "Read-only graph layer for /studio overlay. Field names frozen for P1 wiring. P0 UI may mock; never invent edges when empty.",
+  "title": "deep-tutor-knowledge links (P1 frozen)",
+  "description": "Read-only graph layer for /studio overlay. Field names frozen for P1 wiring. P1: real [[wikilinks]] edges; never invent when empty.",
   "policy": {
     "mode": "read_only",
     "allowlist_only": true,

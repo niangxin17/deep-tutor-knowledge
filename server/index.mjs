@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Zero-dep MCP stdio server for deep-tutor-knowledge.
- * Thin Content-Length JSON-RPC wrapper over server/lib/knowledge.mjs.
+ * Thin Content-Length JSON-RPC wrapper over knowledge.mjs + graph.mjs.
  */
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ import {
   get,
   domainCounts,
 } from "./lib/knowledge.mjs";
+import { graphSnapshot, graphNeighbors } from "./lib/graph.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const wl = loadWhitelist(__dirname);
@@ -86,6 +87,49 @@ const TOOL_DEFS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "knowledge_graph_snapshot",
+    description:
+      "Whitelist-derived graph for studio Links/Mutual/Unresolved. Edges from [[wikilinks]]; empty edges → honest empty, no fabrications.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        domains: {
+          type: "array",
+          items: { type: "string" },
+          description: 'Default ["concepts","methods"].',
+        },
+        mode: {
+          type: "string",
+          enum: ["links", "mutual", "unresolved", "all"],
+          description: "Filter edge kinds; default all.",
+        },
+        limit_nodes: { type: "integer", minimum: 1, maximum: 80, default: 80 },
+        limit_edges: { type: "integer", minimum: 0, maximum: 400, default: 200 },
+        top_n: { type: "integer", minimum: 1, maximum: 20, default: 8 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "knowledge_graph_neighbors",
+    description:
+      "Neighbors of one node for tooltip / Mutual filter. Same allowlist; no invent.",
+    inputSchema: {
+      type: "object",
+      required: ["node_id"],
+      properties: {
+        node_id: { type: "string" },
+        kind: {
+          type: "string",
+          enum: ["link", "mutual", "unresolved", "all"],
+          default: "all",
+        },
+        limit: { type: "integer", minimum: 1, maximum: 40, default: 12 },
+      },
+      additionalProperties: false,
+    },
+  },
 ];
 
 function softErrorResult(code, message) {
@@ -118,6 +162,10 @@ function callTool(name, args) {
       return wrap(get(wl, args || {}));
     case "knowledge_domain_counts":
       return wrap(domainCounts(wl, args || {}));
+    case "knowledge_graph_snapshot":
+      return wrap(graphSnapshot(wl, args || {}));
+    case "knowledge_graph_neighbors":
+      return wrap(graphNeighbors(wl, args || {}));
     default:
       return softErrorResult("INVALID_ARGS", `unknown tool: ${name}`);
   }
@@ -152,7 +200,7 @@ function handleMessage(msg) {
         result: {
           protocolVersion: params?.protocolVersion || "2024-11-05",
           capabilities: { tools: {} },
-          serverInfo: { name: "deep-tutor-knowledge", version: "0.2.0" },
+          serverInfo: { name: "deep-tutor-knowledge", version: "0.3.0" },
         },
       });
       return;

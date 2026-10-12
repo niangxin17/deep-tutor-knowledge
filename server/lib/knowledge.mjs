@@ -198,7 +198,7 @@ export function collectSources(wl) {
   return sources;
 }
 
-function readSourceFile(wl, source) {
+export function readSourceFile(wl, source) {
   const root = wl.roots.find((r) => r.id === source.rootId);
   if (!root || !isInsideRoot(root.absPath, source.absPath)) return null;
   try {
