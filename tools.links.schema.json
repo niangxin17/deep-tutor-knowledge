@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "deep-tutor-knowledge links (P1 sketch)",
+  "description": "Read-only graph layer for /studio overlay. Field names frozen for P1 wiring. P0 UI may mock; never invent edges when empty.",
+  "policy": {
+    "mode": "read_only",
+    "allowlist_only": true,
+    "no_write_graph": true,
+    "no_invent_edges": true,
+    "max_nodes_render_hint": 80,
+    "overlay_list_default": 8
+  },
+  "tools": [
+    {
+      "name": "knowledge_graph_snapshot",
+      "description": "Return whitelist-derived graph for studio Links/Mutual/Unresolved. Nodes only from allowlisted sources; edges from [[wikilinks]] / explicit link markers. Empty edges → honest empty, no fabrications.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "domains": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["concepts", "methods", "works", "ideas", "drafts"] },
+            "description": "Default [\"concepts\",\"methods\"]."
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["links", "mutual", "unresolved", "all"],
+            "description": "Filter edge kinds for overlay; default all then UI filters."
+          },
+          "limit_nodes": { "type": "integer", "minimum": 1, "maximum": 80, "default": 80 },
+          "limit_edges": { "type": "integer", "minimum": 0, "maximum": 400, "default": 200 },
+          "top_n": { "type": "integer", "minimum": 1, "maximum": 20, "default": 8 }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["nodes", "edges", "topConnected", "topConcepts"],
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "title", "shelf", "path", "weight"],
+              "properties": {
+                "id": { "type": "string", "description": "Stable node id; prefer source_id / path." },
+                "title": { "type": "string" },
+                "shelf": { "type": "string", "enum": ["concepts", "methods", "works", "ideas", "drafts"] },
+                "path": { "type": "string", "description": "Whitelist-relative path e.g. methods/费曼一轮.md" },
+                "weight": { "type": "number", "description": "Layout/truncate priority (mentions, degree, or file size heuristic)." }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["from", "to", "kind", "weight"],
+              "properties": {
+                "from": { "type": "string" },
+                "to": { "type": "string" },
+                "kind": { "type": "string", "enum": ["link", "mutual", "unresolved"] },
+                "weight": { "type": "number" },
+                "label": { "type": "string", "description": "Optional short edge label." }
+              }
+            }
+          },
+          "topConnected": {
+            "type": "array",
+            "description": "Most Connected overlay rows (default 8).",
+            "items": {
+              "type": "object",
+              "required": ["from_title", "to_title", "from_path", "to_path", "kind", "weight"],
+              "properties": {
+                "from_id": { "type": "string" },
+                "to_id": { "type": "string" },
+                "from_title": { "type": "string" },
+                "to_title": { "type": "string" },
+                "from_path": { "type": "string" },
+                "to_path": { "type": "string" },
+                "kind": { "type": "string", "enum": ["link", "mutual"] },
+                "weight": { "type": "number" }
+              }
+            }
+          },
+          "topConcepts": {
+            "type": "array",
+            "description": "Top Concepts overlay rows (default 8).",
+            "items": {
+              "type": "object",
+              "required": ["title", "mentions", "path"],
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "mentions": { "type": "integer" },
+                "path": { "type": "string" },
+                "weight": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "knowledge_graph_neighbors",
+      "description": "Optional P1 helper: neighbors of one node for tooltip / Mutual filter. Same allowlist; no invent.",
+      "inputSchema": {
+        "type": "object",
+        "required": ["node_id"],
+        "additionalProperties": false,
+        "properties": {
+          "node_id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["link", "mutual", "unresolved", "all"], "default": "all" },
+          "limit": { "type": "integer", "minimum": 1, "maximum": 40, "default": 12 }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "required": ["node", "neighbors"],
+        "properties": {
+          "node": { "type": "object" },
+          "neighbors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "title", "path", "kind", "weight"],
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "path": { "type": "string" },
+                "kind": { "type": "string", "enum": ["link", "mutual", "unresolved"] },
+                "weight": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "errors": ["NOT_IN_ALLOWLIST", "NOT_FOUND", "INVALID_ARGS", "FORBIDDEN_WRITE", "EMPTY_GRAPH"],
+  "notes": [
+    "Edge derivation P1: parse [[wikilinks]] inside whitelist files; unresolved when target title/path not in allowlist.",
+    "mutual = reciprocal wikilink or explicit mutual marker.",
+    "Reuse domainCounts for five-card numbers; this port only feeds graph overlay.",
+    "P0 studio uses mock edges; switch to knowledge_graph_snapshot without renaming fields."
+  ],
+  "example_empty": {
+    "nodes": [],
+    "edges": [],
+    "topConnected": [],
+    "topConcepts": []
+  },
+  "example_partial": {
+    "nodes": [
+      { "id": "concepts/费曼复述.md", "title": "费曼复述", "shelf": "concepts", "path": "concepts/费曼复述.md", "weight": 21 },
+      { "id": "methods/费曼一轮.md", "title": "费曼一轮", "shelf": "methods", "path": "methods/费曼一轮.md", "weight": 6 }
+    ],
+    "edges": [
+      { "from": "methods/费曼一轮.md", "to": "concepts/费曼复述.md", "kind": "link", "weight": 2 }
+    ],
+    "topConnected": [
+      {
+        "from_id": "methods/费曼一轮.md",
+        "to_id": "concepts/费曼复述.md",
+        "from_title": "费曼一轮",
+        "to_title": "费曼复述",
+        "from_path": "methods/费曼一轮.md",
+        "to_path": "concepts/费曼复述.md",
+        "kind": "link",
+        "weight": 2
+      }
+    ],
+    "topConcepts": [
+      { "id": "concepts/费曼复述.md", "title": "费曼复述", "mentions": 21, "path": "concepts/费曼复述.md", "weight": 21 }
+    ]
+  }
+}

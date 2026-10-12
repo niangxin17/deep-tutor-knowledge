@@ -152,3 +152,7 @@ Studio list pages must show the whitelist-relative path from search/get:
 - `hit.path` or `hit.citation.path` (e.g. `concepts/费曼复述.md`)
 - Never invent a path; empty hits → empty list, no textbook filler.
 
+
+## Links graph sketch (P1)
+
+See [`tools.links.schema.json`](./tools.links.schema.json): `knowledge_graph_snapshot` + optional `knowledge_graph_neighbors`. P0 UI may mock; empty edges must not invent.
